@@ -42,7 +42,6 @@ Route::group(['middleware' => 'api', 'prefix' => 'auth'], function ($router) {
 
 Route::group(['prefix' => 'pass'], function () {
     Route::post('/forgetpass', [ForgetpasswordController::class, 'forgetpass']);
-    Route::post('/validatePasswordRule', [PasswordController::class, 'passwordRule']);
 });
 Route::group(['middleware' => ['jwt.verify']], function () {
     Route::get('/users/{from}/{to}', [UsersController::class, 'user_list']);
@@ -67,12 +66,6 @@ Route::group(['prefix' => 'modules'], function () {
     Route::post('/remove', [ModulesController::class, 'delete']);
     Route::get('/get-child/{type}', [ModulesController::class, 'get_child_from_type']);
 }); 
-
-Route::group(['prefix' => 'reset'], function () {
-    Route::post('/password', [PasswordController::class, 'resetPassword']);
-    Route::post('/verifyAccount', [PasswordController::class, 'verifyAccount']);
-    Route::post('/changePassword', [PasswordController::class, 'changePassword']);
-});
 
 Route::group(['prefix' => 'default-role-access'], function () {
     Route::post('/add', [DefaultRoleAccessController::class, 'store']);
@@ -132,25 +125,6 @@ Route::group(['prefix' => 'system-settings'], function () {
 Route::group(['prefix' => 'general-setting'], function () {
     Route::post('/add', [GeneralSettingController::class, 'add']);
     Route::get('/lists', [GeneralSettingController::class, 'getListSetting']);
-    //Route::post('/fetch', [GeneralSettingController::class, 'getSettingById']);
     Route::post('/update', [GeneralSettingController::class, 'update']);
     Route::post('/remove', [GeneralSettingController::class, 'remove']);
-});
-
-Route::group(['prefix' => 'inventory'], function () {
-    Route::get('/getItemList', [InventoryController::class, 'getItemList']);
-    Route::post('/getItemListbyCategory', [InventoryController::class, 'getItemListbyCategory']);
-    Route::post('/getItembyId', [InventoryController::class, 'getItembyId']);
-    Route::post('/createNewItem', [InventoryController::class, 'createNewItem']);
-});
-
-Route::group(['prefix' => 'sales'], function () {
-    Route::post('/createNewSales', [SalesTransactionController::class, 'createNewSales']);
-    Route::post('/updateSales', [SalesTransactionController::class, 'updateSales']);
-    Route::post('/getSalesListbyStaffId', [SalesTransactionController::class, 'getSalesListbyStaffId']);
-    Route::post('/getMonthlySales', [SalesTransactionController::class, 'getMonthlySales']);
-    Route::post('/getMonthlySalesManager', [SalesTransactionController::class, 'getMonthlySalesManager']);
-    Route::post('/getYearlySales', [SalesTransactionController::class, 'getYearlySales']);
-    Route::post('/getSalesbyId', [SalesTransactionController::class, 'getSalesbyId']);
-    Route::post('/deleteSales', [SalesTransactionController::class, 'deleteSales']);
 });
