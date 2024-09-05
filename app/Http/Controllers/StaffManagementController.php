@@ -7,7 +7,7 @@ use Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\ScreenAccessRoles;
-use App\Models\SalesTransaction;
+use Exception;
 
 class StaffManagementController extends Controller
 {
@@ -15,10 +15,9 @@ class StaffManagementController extends Controller
     public function getStaffList()
     {
         $userList = DB::table('staff_management')
-        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','manager.name as manager','users.status as status','roles.role_name as role','users.id as user_id')
+        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','users.status as status','roles.role_name as role','users.id as user_id')
         ->leftJoin('users','users.staff_id','=','staff_management.staff_id')
         ->leftJoin('Roles','roles.id','=','users.role_id')
-        ->leftJoin('staff_management as manager','manager.staff_id','=','staff_management.reporting_manager_id')
         ->orderBy('staff_management.name','asc')
         ->get();
 
@@ -28,7 +27,6 @@ class StaffManagementController extends Controller
             $item->nric_no = $item->nric_no ?? '-';
             $item->contact_no = $item->contact_no ?? '-';
             $item->email = $item->email ?? '-';
-            $item->manager = strtoupper($item->manager) ?? '-';
             $item->role = strtoupper($item->role) ?? '-';
             
             if($item->status == 0){
@@ -44,10 +42,9 @@ class StaffManagementController extends Controller
     public function getStaffListbyCode($code)
     {
         $userList = DB::table('staff_management')
-        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','manager.name as manager','users.status as status','roles.role_name as role')
+        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','users.status as status','roles.role_name as role')
         ->leftJoin('users','users.staff_id','=','staff_management.staff_id')
         ->leftJoin('Roles','roles.id','=','users.role_id')
-        ->leftJoin('staff_management as manager','manager.staff_id','=','staff_management.reporting_manager_id')
         ->where('roles.code',$code)
         ->orderBy('staff_management.name','asc')
         ->get();
@@ -58,7 +55,6 @@ class StaffManagementController extends Controller
             $item->nric_no = $item->nric_no ?? '-';
             $item->contact_no = $item->contact_no ?? '-';
             $item->email = $item->email ?? '-';
-            $item->manager = strtoupper($item->manager) ?? '-';
             $item->role = strtoupper($item->role) ?? '-';
             
             if($item->status == 0){
@@ -75,10 +71,9 @@ class StaffManagementController extends Controller
     public function getStaffListbyId(Request $request)
     {
         $userList = DB::table('staff_management')
-        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','manager.staff_id as manager_id','manager.name as manager_name','users.status as status','roles.id as role_id','roles.role_name as role')
+        ->select('staff_management.staff_id','staff_management.name','staff_management.nric_no','staff_management.contact_no','users.email','users.status as status','roles.id as role_id','roles.role_name as role')
         ->leftJoin('users','users.staff_id','=','staff_management.staff_id')
         ->leftJoin('Roles','roles.id','=','users.role_id')
-        ->leftJoin('staff_management as manager','manager.staff_id','=','staff_management.reporting_manager_id')
         ->where('staff_management.staff_id',$request->staff_id)
         ->first();
         
@@ -87,12 +82,11 @@ class StaffManagementController extends Controller
     }
     public function createNewStaff(Request $request)
     {
-      
         $dataStaff = [
             'name' => $request->name,
             'nric_no' => $request->nric_no,
             'contact_no' => $request->contact_no,
-            'reporting_manager_id' => $request->reporting_manager_id,
+          
         ];
 
         if($request->editId ==''){
@@ -146,7 +140,8 @@ class StaffManagementController extends Controller
                 return response()->json(["message" => "Record Successfully Created", "code" => 200]);
             }
 
-        }else{
+        }else{ // update users
+            
             $validator = Validator::make($request->all(), [
                 'name' => 'required',
                 'nric_no' => 'required',
@@ -214,25 +209,40 @@ class StaffManagementController extends Controller
 
     public function deleteStaff(Request $request)
     {
-    try {
-        $getRecord=SalesTransaction::where('created_by', $request->staff_id)->first();
-
-        if(!$getRecord){
-        $getUserId=User::select('id')->where('staff_id', $request->staff_id)->first();
-        ScreenAccessRoles::where('staff_id',$getUserId->id)->delete();
-
-        User::where('staff_id', $request->staff_id)->delete();
-        StaffManagement::where('staff_id', $request->staff_id)->delete();
-        return response()->json(["message" => "deleted", "code" => 200]);
+        try {
+            // Start the transaction
+            DB::beginTransaction();
+        
+            // Fetch the user ID based on staff ID
+            $getUserId = User::select('id')->where('staff_id', $request->staff_id)->first();
+        
+            // Check if user exists before proceeding with deletion
+            if (!$getUserId) {
+                throw new Exception('User not found');
+            }
+        
+            // Perform deletions
+            $screenAccessRolesDeleted = ScreenAccessRoles::where('staff_id', $getUserId->id)->delete();
+            $userDeleted = User::where('staff_id', $request->staff_id)->delete();
+            $staffManagementDeleted = StaffManagement::where('staff_id', $request->staff_id)->delete();
+        
+            // Check if all deletions were successful
+            if ($userDeleted && $staffManagementDeleted) {
+                // Commit the transaction
+                DB::commit();
+                return response()->json(["message" => "deleted", "code" => 200]);
+            } else {
+                // Rollback the transaction if any deletion failed
+                DB::rollBack();
+                return response()->json(['error' => 'Item could not be deleted'], 400);
+            }
+        } catch (Exception $e) {
+            // Rollback the transaction in case of an exception
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 404);
         }
-        if($getRecord){
-            return response()->json(["message" => "existed", "code" => 200]);
-        }
 
-
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Item not found or could not be deleted'], 404);
-    }
+   
    }
 
 
