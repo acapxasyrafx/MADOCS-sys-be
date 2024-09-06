@@ -12,7 +12,6 @@ class StaffManagement extends Model
     protected $table = 'staff_management';
     protected $fillable = [
         'name',
-        'reporting_manager_id',
         'nric_no',
         'contact_no',
         'added_by',

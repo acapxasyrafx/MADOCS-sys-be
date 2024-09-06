@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\EmailTest;
+
 use App\Mail\TestMail as testEmail;
 use App\Models\EmailSetting;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Exception;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
 use Validator;
 
@@ -101,7 +98,7 @@ class EmailSettingController extends Controller
                     'message' => 'Email setting successfully connected.',
                     'code' => 200
                 ]);
-            } catch (\Exception $err) {
+            } catch (Exception $err) {
                 var_dump($err);
 
                 return response([

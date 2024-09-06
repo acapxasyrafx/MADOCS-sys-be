@@ -41,7 +41,7 @@ class AuthController extends Controller
         $userInfo = User::select('id','staff_id','role_id','status')
         ->where('email', $request->email)->first();
         
-        $detailInfo = StaffManagement::select('name','nric_no','reporting_manager_id','contact_no')
+        $detailInfo = StaffManagement::select('name','nric_no','contact_no')
         ->where('staff_id',$userInfo->staff_id)
         ->first();
 
