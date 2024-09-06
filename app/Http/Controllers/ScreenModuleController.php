@@ -8,8 +8,6 @@ use App\Models\ScreensModule;
 use App\Models\ScreenSubModule;
 use App\Models\ScreenPageModule;
 use App\Models\ScreenAccessRoles;
-use App\Models\HospitalBranchTeamManagement;
-use App\Models\StaffManagement;
 use Illuminate\Support\Facades\DB;
 
 class ScreenModuleController extends Controller
@@ -17,9 +15,6 @@ class ScreenModuleController extends Controller
 
     public function getUserMatrixListById(Request $request)
     {
-
-
-        
 
             $list = DB::table('screen_access_roles')
             ->select('screen_access_roles.id',
@@ -527,294 +522,76 @@ class ScreenModuleController extends Controller
         return response()->json(["message" => "User Matrix List", 'list' => $list, "code" => 200]);
     }
     
-
-    public function getAccessScreenByUserId1(Request $request)
-    {
-        $validator = Validator::make($request->all(), ['staff_id' => 'required|integer']);
-        if ($validator->fails()) return  response()->json(["message" => $validator->errors(), "code" => 422]);
-
-
-        $list1 = DB::table('screen_access_roles')
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->join('screen_modules', 'screen_modules.id', '=', 'screen_access_roles.module_id')
-        ->select('screen_access_roles.module_id','screen_access_roles.sub_module_id',
-        'screens.screen_route','screens.icon','screen_access_roles.screen_id',
-        'screen_modules.module_name','screen_access_roles.id')
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screen_access_roles.staff_id','=', $request->staff_id)
-        ->groupBy('screen_access_roles.id','screen_modules.id','screen_access_roles.module_id','screen_access_roles.sub_module_id','screens.screen_name','screens.screen_route','screen_modules.module_name','screens.icon','screens.index_val','screen_access_roles.screen_id',
-        )
-        ->get();
-
-        $result1 = (array) json_decode($list1,true);
-        $result=[];
-        $result2 = [];
-
-        if (count($result1) > 0) {
-            foreach ($result1 as $key => $val) {
-
-                if(empty($result[$val['module_id']])){
-                    $result[$val['module_id']]=[];
-                    $result[$val['module_id']]['module_id']=$val['module_id'] ??  'NA';
-                    $result[$val['module_id']]['screen_route'] = $val['screen_route'] ??  'NA';
-                    $result[$val['module_id']]['screen_name'] = $val['module_name'] ??  'NA';
-                    $result[$val['module_id']]['icon'] = $val['icon'] ??  'NA';
-                    $result[$val['module_id']]['screen_acess_role_id'] = $val['id'] ??  'NA';
-
-                    $result[$val['module_id']]['sub_module_id']=[];
-                }
-
-                if($val['sub_module_id']){
-                   $ab=ScreenPageModule:: select('*')->where('sub_module_id',$val['sub_module_id'])
-                   ->get();
-                   $result_tmp = (array) json_decode($ab,true);
-                   foreach ($result_tmp as $key => $val_) {
-                    $result[$val['module_id']]['sub_module_id'][] = $val_;
-                    }
-                }
-            }
-            foreach ($result as $key => $value) {
-                $result2[] = $value;
-            }
-        }
-        if($result2){
-            return response()->json(["message" => "User Access List", 'list' => $result2, "code" => 200]);
-        }else{
-            return response()->json(["message" => "User Access List", 'list' => $result2, "code" => 400]);
-        }
-
-
-    }
-
     public function getAccessScreenByUserId(Request $request)
     {
+        // Validate the incoming request
         $validator = Validator::make($request->all(), ['staff_id' => 'required|integer']);
-        if ($validator->fails()) return  response()->json(["message" => $validator->errors(), "code" => 422]);
-
-
-        $list1 = DB::table('screen_access_roles')
-        ->select('screen_access_roles.module_id','screen_access_roles.sub_module_id',
-        'screens.screen_route','screens.icon','screen_access_roles.screen_id',
-        'screen_modules.module_name','screen_access_roles.id')
-       
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->join('screen_modules', 'screen_modules.id', '=', 'screen_access_roles.module_id')
-
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screen_access_roles.staff_id','=', $request->staff_id)
-        ->groupBy('screen_access_roles.id','screen_modules.id','screen_access_roles.module_id','screen_access_roles.sub_module_id','screens.screen_name','screens.screen_route','screen_modules.module_name','screens.icon','screens.index_val','screen_access_roles.screen_id',
-        )
-        ->orderBy('screen_modules.module_order','ASC')
-        ->get();
-
-        $result1 = (array) json_decode($list1,true);
-        $result=[];
-        $result2 = [];
-
-        if (count($result1) > 0) {
-            foreach ($result1 as $key => $val) {
-                if(empty($result[$val['module_id']])){
-                    $result[$val['module_id']]=[];
-                    $result[$val['module_id']]['module_id']=$val['module_id'] ??  'NA';
-                    $result[$val['module_id']]['screen_route'] = $val['screen_route'] ??  'NA';
-                    $result[$val['module_id']]['screen_name'] = $val['module_name'] ??  'NA';
-                    $result[$val['module_id']]['icon'] = $val['icon'] ??  'NA';
-                    $result[$val['module_id']]['screen_acess_role_id'] = $val['id'] ??  'NA';
-
-                    $result[$val['module_id']]['sub_module_id']=[];
-                }
-
-                if($val['sub_module_id']){
-                $ab = DB::table('screen_access_roles')
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->select('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-        'screen_access_roles.id')
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screens.sub_module_id','=',$val['sub_module_id'])
-        ->where('screen_access_roles.staff_id','=', $request->staff_id)
-        ->groupBy('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-        'screen_access_roles.id')
-        ->get();
-                   $result_tmp = (array) json_decode($ab,true);
-                   foreach ($result_tmp as $key => $val_) {
-                    $result[$val['module_id']]['sub_module_id'][] = $val_;
-                    }
-                }
-            }
-            foreach ($result as $key => $value) {
-                $result2[] = $value;
-            }
+        if ($validator->fails()) {
+            return response()->json(["message" => $validator->errors(), "code" => 422]);
         }
-        if($result2){
-            return response()->json(["message" => "User Access List2", 'list' => $result2, "code" => 200]);
-        }else{
-            return response()->json(["message" => "User Access List2", 'list' => $result2, "code" => 400]);
-        }
-
     
-
-
-    }
-
-    public function getAccessScreenByUserIdForReport(Request $request)
-    {
-        $validator = Validator::make($request->all(), ['staff_id' => 'required|integer']);
-        if ($validator->fails()) return  response()->json(["message" => $validator->errors(), "code" => 422]);
-
-    if($request->type=="User Administrator"){
+        // Fetch all screen access roles and related data in a single query
         $list1 = DB::table('screen_access_roles')
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->join('screen_modules', 'screen_modules.id', '=', 'screen_access_roles.module_id')
-        ->select('screen_access_roles.module_id','screen_access_roles.sub_module_id',
-        'screens.screen_route','screens.icon','screen_access_roles.screen_id',
-        'screen_modules.module_name','screen_access_roles.id')
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screen_access_roles.user_type','=', $request->type)
-        ->where(function ($query) {
-            $query->orWhere('screen_modules.id','=', '26')//Workload Report
-                  ->orWhere('screen_modules.id','=', '27')//Activities Report
-                  ->orWhere('screen_modules.id','=', '28')//National KPI
-                  ->orWhere('screen_modules.id','=', '29');//SHHARP
-        })
-        ->where('screen_access_roles.staff_id','=', $request->staff_id)
-        ->groupBy('screen_access_roles.id','screen_modules.id','screen_access_roles.module_id','screen_access_roles.sub_module_id','screens.screen_name','screens.screen_route','screen_modules.module_name','screens.icon','screens.index_val','screen_access_roles.screen_id',
-        )
-        ->get();
-
-        $result1 = (array) json_decode($list1,true);
-        $result=[];
-        $result2 = [];
-
-        if (count($result1) > 0) {
-            foreach ($result1 as $key => $val) {
-                if(empty($result[$val['module_id']])){
-                    $result[$val['module_id']]=[];
-                    $result[$val['module_id']]['module_id']=$val['module_id'] ??  'NA';
-                    $result[$val['module_id']]['screen_route'] = $val['screen_route'] ??  'NA';
-                    $result[$val['module_id']]['screen_name'] = $val['module_name'] ??  'NA';
-                    $result[$val['module_id']]['icon'] = $val['icon'] ??  'NA';
-                    $result[$val['module_id']]['screen_acess_role_id'] = $val['id'] ??  'NA';
-
-                    $result[$val['module_id']]['sub_module_id']=[];
-                }
-
-                if($val['sub_module_id']){
-                    $ab = DB::table('screen_access_roles')
-                        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-                        ->select('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-                        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-                        'screen_access_roles.id')
-                        ->where('screen_access_roles.status','=', '1')
-                        ->where('screens.screen_status','=', '1')
-                        ->where('screens.sub_module_id','=',$val['sub_module_id'])
-                        ->where(function ($query) {
-                            $query->orWhere('screen_modules.id','=', '26')//Workload Report
-                                  ->orWhere('screen_modules.id','=', '27')//Activities Report
-                                  ->orWhere('screen_modules.id','=', '28')//National KPI
-                                  ->orWhere('screen_modules.id','=', '29');//SHHARP
-                        })
-                        ->where('screen_access_roles.user_type','=', $request->type)
-                        ->groupBy('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-                        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-                        'screen_access_roles.id')
-                        ->get();
-                    $result_tmp = (array) json_decode($ab,true);
-                    foreach ($result_tmp as $key => $val_) {
-                        $result[$val['module_id']]['sub_module_id'][] = $val_;
-                        }
+            ->select(
+                'screen_access_roles.module_id',
+                'screen_access_roles.sub_module_id',
+                'screens.screen_route',
+                'screens.icon',
+                'screens.screen_name',  // Make sure this is included for both main and sub-menus
+                'screen_access_roles.screen_id',
+                'screen_modules.module_name',
+                'screen_access_roles.id as screen_access_role_id'
+            )
+            ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
+            ->join('screen_modules', 'screen_modules.id', '=', 'screen_access_roles.module_id')
+            ->where('screen_access_roles.status', '=', '1')
+            ->where('screens.screen_status', '=', '1')
+            ->where('screen_access_roles.staff_id', '=', $request->staff_id)
+            ->orderBy('screen_modules.module_order', 'ASC')
+            ->get()
+            ->groupBy('module_id');
+    
+        // Initialize the result array
+        $result = [];
+    
+        // Process each module and its screens
+        foreach ($list1 as $moduleId => $screens) {
+            $moduleData = [
+                'module_id' => $moduleId,
+                'screen_route' => $screens[0]->screen_route ?? 'NA',
+                'screen_name' => $screens[0]->module_name ?? 'NA',
+                'icon' => $screens[0]->icon ?? 'NA',
+                'screen_access_role_id' => $screens[0]->screen_access_role_id ?? 'NA',
+                'sub_module_id' => []
+            ];
+    
+            // Process each screen within the module
+            foreach ($screens as $screen) {
+                if ($screen->sub_module_id) {
+                    $moduleData['sub_module_id'][] = [
+                        'sub_module_id' => $screen->sub_module_id,
+                        'screen_id' => $screen->screen_id,
+                        'screen_route' => $screen->screen_route,
+                        'icon' => $screen->icon,
+                        'screen_name' => $screen->screen_name,
+                        'screen_access_role_id' => $screen->screen_access_role_id,
+                       
+                    ];
                 }
             }
-            foreach ($result as $key => $value) {
-                $result2[] = $value;
-            }
+    
+            // Append module data to the result
+            $result[] = $moduleData;
         }
-        if($result2){
-            return response()->json(["message" => "User Access List", 'list' => $result2, "code" => 200]);
-        }else{
-            return response()->json(["message" => "User Access List", 'list' => $result2, "code" => 400]);
-        }
-    }else{
-
-        $list1 = DB::table('screen_access_roles')
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->join('screen_modules', 'screen_modules.id', '=', 'screen_access_roles.module_id')
-        ->select('screen_access_roles.module_id','screen_access_roles.sub_module_id',
-        'screens.screen_route','screens.icon','screen_access_roles.screen_id',
-        'screen_modules.module_name','screen_access_roles.id')
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screen_access_roles.staff_id','=', $request->staff_id) //possibleconditionforappearingreport[all]
-        ->where(function ($query) {
-            $query->orWhere('screen_modules.id','=', '26')//Workload Report
-                  ->orWhere('screen_modules.id','=', '27')//Activities Report
-                  ->orWhere('screen_modules.id','=', '28')//National KPI
-                  ->orWhere('screen_modules.id','=', '29');//SHHARP
-        })
-        ->groupBy('screen_access_roles.id','screen_modules.id','screen_access_roles.module_id','screen_access_roles.sub_module_id','screens.screen_name','screens.screen_route','screen_modules.module_name','screens.icon','screens.index_val','screen_access_roles.screen_id',
-        )
-        ->get();
-
-        $result1 = (array) json_decode($list1,true);
-        $result=[];
-        $result2 = [];
-
-        if (count($result1) > 0) {
-            foreach ($result1 as $key => $val) {
-                if(empty($result[$val['module_id']])){
-                    $result[$val['module_id']]=[];
-                    $result[$val['module_id']]['module_id']=$val['module_id'] ??  'NA';
-                    $result[$val['module_id']]['screen_route'] = $val['screen_route'] ??  'NA';
-                    $result[$val['module_id']]['screen_name'] = $val['module_name'] ??  'NA';
-                    $result[$val['module_id']]['icon'] = $val['icon'] ??  'NA';
-                    $result[$val['module_id']]['screen_acess_role_id'] = $val['id'] ??  'NA';
-
-                    $result[$val['module_id']]['sub_module_id']=[];
-                }
-
-                if($val['sub_module_id']){
-                $ab = DB::table('screen_access_roles')
-        ->join('screens', 'screen_access_roles.screen_id', '=', 'screens.id')
-        ->select('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-        'screen_access_roles.id')
-        ->where('screen_access_roles.status','=', '1')
-        ->where('screens.screen_status','=', '1')
-        ->where('screens.sub_module_id','=',$val['sub_module_id'])
-        ->where('screen_access_roles.staff_id','=', $request->staff_id)
-        ->groupBy('screens.id','screens.added_by','screens.module_id','screens.module_name','screens.sub_module_id',
-        'screens.sub_module_name','screens.screen_name','screens.screen_route','screens.icon',
-        'screen_access_roles.id')
-        ->get();
-                   $result_tmp = (array) json_decode($ab,true);
-                   foreach ($result_tmp as $key => $val_) {
-                    $result[$val['module_id']]['sub_module_id'][] = $val_;
-                    }
-                }
-            }
-            foreach ($result as $key => $value) {
-                $result2[] = $value;
-            }
-        }
-        if($result2){
-            return response()->json(["message" => "User Access List2", 'list' => $result2, "code" => 200]);
-        }else{
-            return response()->json(["message" => "User Access List2", 'list' => $result2, "code" => 400]);
-        }
-
+    
+        // Return the final response
+        return response()->json([
+            "message" => "User Access List2",
+            'list' => $result,
+            "code" => count($result) > 0 ? 200 : 400
+        ]);
     }
-
-
-    }
-
-
-
-
+    
     public function UpdateScreenRole(Request $request)
     {
         $validator = Validator::make($request->all(), [
