@@ -1,3 +1,4 @@
+# Use the official PHP image with Apache
 FROM php:8.1-apache
 
 # Set the working directory
@@ -16,8 +17,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
-    lua-zlib-dev \
-    libmemcached-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd pdo_mysql mbstring zip exif pcntl \
     && rm -rf /var/lib/apt/lists/*
@@ -34,15 +33,8 @@ COPY . .
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Add a non-root user
-RUN useradd -G www-data,root -u 1000 -d /home/devuser devuser \
-    && mkdir -p /home/devuser/.composer \
-    && chown -R devuser:devuser /home/devuser
-
-USER devuser
-
-# Clear Laravel configuration cache
-RUN php artisan config:clear
+# Expose port 80
+EXPOSE 80
 
 # Start Apache
 CMD ["apache2-foreground"]
