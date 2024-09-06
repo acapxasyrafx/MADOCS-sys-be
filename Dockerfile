@@ -1,9 +1,9 @@
 FROM php:8.1-apache
 
+# Set the working directory
 WORKDIR /var/www/html
 
-COPY composer.lock composer.json ./
-
+# Install system dependencies and PHP extensions
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
@@ -17,28 +17,32 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     lua-zlib-dev \
-    libmemcached-dev
+    libmemcached-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd pdo_mysql mbstring zip exif pcntl \
+    && rm -rf /var/lib/apt/lists/*
 
+# Copy composer files and install dependencies
+COPY composer.lock composer.json ./
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
+    && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-RUN docker-php-ext-install pdo_mysql mbstring zip exif pcntl
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install gd
-
+# Copy the rest of the application
 COPY . .
 
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-
-RUN useradd -G www-data,root -u 1000 -d /home/devuser devuser
-RUN mkdir -p /home/devuser/.composer && \
-    chown -R devuser:devuser /home/devuser
+# Add a non-root user
+RUN useradd -G www-data,root -u 1000 -d /home/devuser devuser \
+    && mkdir -p /home/devuser/.composer \
+    && chown -R devuser:devuser /home/devuser
 
 USER devuser
 
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-
+# Clear Laravel configuration cache
 RUN php artisan config:clear
 
-CMD bash -c "php artisan config:clear && apache2-foreground"
+# Start Apache
+CMD ["apache2-foreground"]
