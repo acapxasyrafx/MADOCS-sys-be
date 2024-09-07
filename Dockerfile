@@ -1,40 +1,33 @@
-# Use the official PHP image with Apache
-FROM php:8.1-apache
+# Base image
+FROM php:8.0-fpm
 
-# Set the working directory
-WORKDIR /var/www/html
+# Set working directory
+WORKDIR /var/www
 
-# Install system dependencies and PHP extensions
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    locales \
-    zip \
-    jpegoptim optipng pngquant gifsicle \
-    vim \
-    unzip \
     git \
     curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo_mysql mbstring zip exif pcntl \
-    && rm -rf /var/lib/apt/lists/*
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 
-# Copy composer files and install dependencies
-COPY composer.lock composer.json ./
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy the rest of the application
+# Copy project files
 COPY . .
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Install project dependencies
+RUN composer install --no-dev --optimize-autoloader
 
-# Expose port 80
-EXPOSE 80
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Expose port 8080 and start PHP-FPM
+EXPOSE 8080
+CMD ["php-fpm"]
