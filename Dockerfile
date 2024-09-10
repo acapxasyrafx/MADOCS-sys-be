@@ -1,33 +1,30 @@
-# Base image
-FROM php:8.0-fpm
+FROM composer:2.0 as build
+WORKDIR /app
+COPY . /app
+RUN composer install --no-scripts --no-autoloader && \
+    composer dump-autoload --optimize
 
-# Set working directory
-WORKDIR /var/www
+FROM php:7.3-apache-stretch
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libxml2-dev \
-    zip \
-    unzip \
-    libzip-dev \
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    mysql-client
 
-# Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# Copy project files
-COPY . .
-
-# Install project dependencies
-RUN composer install --no-dev --optimize-autoloader
-
-# Set proper permissions
-RUN chown -R www-data:www-data /var/www
-
-# Expose port 8080 and start PHP-FPM
 EXPOSE 8080
-CMD ["php-fpm"]
+COPY --from=build /app /var/www/
+COPY docker/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+RUN  chown -R www-data:www-data /var/www/;
+RUN  find /var/www/ -type f -exec chmod 644 {} \;
+RUN  find /var/www/ -type d -exec chmod 755 {} \;
+
+RUN cd /var/www/ && \
+    mv .env.example .env && \
+    php artisan key:generate && \
+    chgrp -R www-data storage bootstrap/cache && \
+    chmod -R ug+rwx storage bootstrap/cache && \
+    echo "Listen 8080" >> /etc/apache2/ports.conf && \
+    a2enmod rewrite
+
